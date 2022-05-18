@@ -188,4 +188,39 @@ class History extends ActiveRecord
         $detail = json_decode($this->detail);
         return isset($detail->data->{$attribute}) ? $detail->data->{$attribute} : null;
     }
+
+    /**
+     * @return string
+     */
+    public function getBody(): string
+    {
+        switch ($this->event) {
+            case History::EVENT_CREATED_TASK:
+            case History::EVENT_COMPLETED_TASK:
+            case History::EVENT_UPDATED_TASK:
+                $task = $this->task;
+                return "$this->eventText: " . ($task->title ?? '');
+            case History::EVENT_INCOMING_SMS:
+            case History::EVENT_OUTGOING_SMS:
+                return $this->sms->message ? $this->sms->message : '';
+            case History::EVENT_OUTGOING_FAX:
+            case History::EVENT_INCOMING_FAX:
+                return $this->eventText;
+            case History::EVENT_CUSTOMER_CHANGE_TYPE:
+                return "$this->eventText " .
+                    (Customer::getTypeTextByType($this->getDetailOldValue('type')) ?? "not set") . ' to ' .
+                    (Customer::getTypeTextByType($this->getDetailNewValue('type')) ?? "not set");
+            case History::EVENT_CUSTOMER_CHANGE_QUALITY:
+                return "$this->eventText " .
+                    (Customer::getQualityTextByQuality($this->getDetailOldValue('quality')) ?? "not set") . ' to ' .
+                    (Customer::getQualityTextByQuality($this->getDetailNewValue('quality')) ?? "not set");
+            case History::EVENT_INCOMING_CALL:
+            case History::EVENT_OUTGOING_CALL:
+                /** @var Call $call */
+                $call = $this->call;
+                return ($call ? $call->totalStatusText . ($call->getTotalDisposition(false) ? " <span class='text-grey'>" . $call->getTotalDisposition(false) . "</span>" : "") : '<i>Deleted</i> ');
+            default:
+                return $this->eventText;
+        }
+    }
 }
