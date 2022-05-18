@@ -26,7 +26,7 @@ use yii\db\ActiveRecord;
  * @property string $totalDisposition
  * @property string $durationText
  * @property string $fullDirectionText
- * @property string $client_phone
+ * @property string $clientPhone
  *
  * @property Customer $customer
  * @property User $user
@@ -104,7 +104,7 @@ class Call extends ActiveRecord
     /**
      * @return string
      */
-    public function getClient_phone()
+    public function getClientPhone()
     {
         return $this->direction == self::DIRECTION_INCOMING ? $this->phone_from : $this->phone_to;
     }

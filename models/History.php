@@ -3,6 +3,13 @@
 namespace app\models;
 
 use app\models\traits\ObjectNameTrait;
+use app\widgets\HistoryList\strategies\CallStrategy;
+use app\widgets\HistoryList\strategies\CustomerStrategy;
+use app\widgets\HistoryList\strategies\DefaultStrategy;
+use app\widgets\HistoryList\strategies\FaxStrategy;
+use app\widgets\HistoryList\strategies\HistoryViewStrategyInterface;
+use app\widgets\HistoryList\strategies\SmsStrategy;
+use app\widgets\HistoryList\strategies\TaskStrategy;
 use Yii;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
@@ -190,37 +197,35 @@ class History extends ActiveRecord
     }
 
     /**
-     * @return string
+     * @return HistoryViewStrategyInterface
      */
-    public function getBody(): string
+    public function getStrategy(): HistoryViewStrategyInterface
     {
         switch ($this->event) {
             case History::EVENT_CREATED_TASK:
             case History::EVENT_COMPLETED_TASK:
             case History::EVENT_UPDATED_TASK:
-                $task = $this->task;
-                return "$this->eventText: " . ($task->title ?? '');
+                $strategy = new TaskStrategy($this);
+                break;
             case History::EVENT_INCOMING_SMS:
             case History::EVENT_OUTGOING_SMS:
-                return $this->sms->message ? $this->sms->message : '';
+                $strategy = new SmsStrategy($this);
+                break;
             case History::EVENT_OUTGOING_FAX:
             case History::EVENT_INCOMING_FAX:
-                return $this->eventText;
+                $strategy = new FaxStrategy($this);
+                break;
             case History::EVENT_CUSTOMER_CHANGE_TYPE:
-                return "$this->eventText " .
-                    (Customer::getTypeTextByType($this->getDetailOldValue('type')) ?? "not set") . ' to ' .
-                    (Customer::getTypeTextByType($this->getDetailNewValue('type')) ?? "not set");
             case History::EVENT_CUSTOMER_CHANGE_QUALITY:
-                return "$this->eventText " .
-                    (Customer::getQualityTextByQuality($this->getDetailOldValue('quality')) ?? "not set") . ' to ' .
-                    (Customer::getQualityTextByQuality($this->getDetailNewValue('quality')) ?? "not set");
+                $strategy = new CustomerStrategy($this);
+                break;
             case History::EVENT_INCOMING_CALL:
             case History::EVENT_OUTGOING_CALL:
-                /** @var Call $call */
-                $call = $this->call;
-                return ($call ? $call->totalStatusText . ($call->getTotalDisposition(false) ? " <span class='text-grey'>" . $call->getTotalDisposition(false) . "</span>" : "") : '<i>Deleted</i> ');
+                $strategy = new CallStrategy($this);
+                break;
             default:
-                return $this->eventText;
+                $strategy = new DefaultStrategy($this);
         }
+        return $strategy;
     }
 }
