@@ -3,6 +3,13 @@
 namespace app\models;
 
 use app\models\traits\ObjectNameTrait;
+use app\widgets\HistoryList\strategies\CallStrategy;
+use app\widgets\HistoryList\strategies\CustomerStrategy;
+use app\widgets\HistoryList\strategies\DefaultStrategy;
+use app\widgets\HistoryList\strategies\FaxStrategy;
+use app\widgets\HistoryList\strategies\HistoryViewStrategyInterface;
+use app\widgets\HistoryList\strategies\SmsStrategy;
+use app\widgets\HistoryList\strategies\TaskStrategy;
 use Yii;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
@@ -187,5 +194,38 @@ class History extends ActiveRecord
     {
         $detail = json_decode($this->detail);
         return isset($detail->data->{$attribute}) ? $detail->data->{$attribute} : null;
+    }
+
+    /**
+     * @return HistoryViewStrategyInterface
+     */
+    public function getStrategy(): HistoryViewStrategyInterface
+    {
+        switch ($this->event) {
+            case History::EVENT_CREATED_TASK:
+            case History::EVENT_COMPLETED_TASK:
+            case History::EVENT_UPDATED_TASK:
+                $strategy = new TaskStrategy($this);
+                break;
+            case History::EVENT_INCOMING_SMS:
+            case History::EVENT_OUTGOING_SMS:
+                $strategy = new SmsStrategy($this);
+                break;
+            case History::EVENT_OUTGOING_FAX:
+            case History::EVENT_INCOMING_FAX:
+                $strategy = new FaxStrategy($this);
+                break;
+            case History::EVENT_CUSTOMER_CHANGE_TYPE:
+            case History::EVENT_CUSTOMER_CHANGE_QUALITY:
+                $strategy = new CustomerStrategy($this);
+                break;
+            case History::EVENT_INCOMING_CALL:
+            case History::EVENT_OUTGOING_CALL:
+                $strategy = new CallStrategy($this);
+                break;
+            default:
+                $strategy = new DefaultStrategy($this);
+        }
+        return $strategy;
     }
 }
